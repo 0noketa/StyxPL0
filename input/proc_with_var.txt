@@ -1,0 +1,12 @@
+PROGRAM hello;
+
+PROCEDURE x;
+VAR n;
+BEGIN
+	n := 2;
+	n := n * 2;
+	RETURN n
+END;
+
+BEGIN
+END.

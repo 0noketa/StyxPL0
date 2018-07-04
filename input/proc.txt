@@ -1,0 +1,8 @@
+PROGRAM hello;
+
+PROCEDURE x;
+BEGIN
+END;
+
+BEGIN
+END.

@@ -1,0 +1,70 @@
+
+
+Language PL0
+;; contains any conflict
+
+
+Regular Grammar
+
+ign Ign = ' \n\r\t'
+let Alf = 'A'..'Z' | 'a'..'z'
+let Num = '0'..'9'
+let Alnm = Alf | Num
+tok Id = Alf {Alnm}
+tok Int = ('1'..'9') {Num} | "0"
+tok Op = "," | ";" | "." | ":=" | "=" | '#+-()[]'
+com Cm = "{" {'\20'..'\7E'| '\r\n\t'} "}"
+
+Context Free Grammar
+
+start Prog
+:prog: "PROGRAM" Id ";" [Def ";" ...] "BEGIN" Stms "END" "."
+
+let Defs
+:non  :
+:defs : Def [";" Def ...]
+
+let Def
+:vars: "VAR" Ids
+:proc: "PROCEDURE" Id ["(" Ids ")"] ";" [Def ";" ...] "BEGIN" Stms "END"
+
+let Ids
+:ids: Id ["," Id ...]
+
+let Stms
+:non  :
+:stms : Stm [";" Stm ...]
+
+let Stm
+:begin: "BEGIN" Stms "END"
+:if   : "IF" Expr "THEN" Stm [ElsIf ...] ["ELSE" Stm]
+:assgn: Id ":=" Expr
+:retrn: "RETURN" Expr
+:print: "PRINT" "(" Exprs ")"
+:call : "CALL" Id ["(" Exprs ")"]
+
+let ElsIf
+:non  :
+:elsif: "ELSIF" Expr "THEN" Stm
+
+let Exprs
+:non  :
+:exprs: Expr ["," Expr ...]
+
+let Expr
+:ign0: Expr2
+:equ : Expr2 "=" Expr2
+:neq : Expr2 "#" Expr2
+
+let Expr2
+:ign0: Expr3
+:add : Expr2 "+" Expr3
+:sub : Expr2 "-" Expr3
+
+let Expr3
+:ign0: Expr4
+
+let Expr4
+:id  : Id
+:int : Int
+:call: Id "(" Exprs ")"

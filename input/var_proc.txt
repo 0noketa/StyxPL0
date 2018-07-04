@@ -1,0 +1,15 @@
+PROGRAM hello;
+VAR n;
+
+PROCEDURE x;
+BEGIN
+	n := n * n;
+	RETURN n
+END;
+
+BEGIN
+	n := 2;
+	PRONT(n);
+	CALL x;
+	PRONT(n);
+END.
