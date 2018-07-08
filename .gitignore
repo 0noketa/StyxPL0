@@ -1,0 +1,11 @@
+*.obj
+*.abs
+*.exe
+*.ilk
+*.pdb
+*_int.*
+*_lim.*
+*_pim.*
+*.pdb
+ctoh.cth
+*.idb

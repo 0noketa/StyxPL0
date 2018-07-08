@@ -52,9 +52,9 @@ int main(int argc, char *argv[]) {
     { Scn_T scn;
         Scn_get_PL0(&scn);
 
-        { Scn_Stream strm = Stream_string(scn, src);
-            { PLR_Tab plr = PLR_get_PL0();
-                { PT_Term trm;
+        { PLR_Tab plr = PLR_get_PL0();
+            { PT_Term trm;
+                { Scn_Stream strm = Stream_string(scn, src);
                     { PT_Cfg cfg = PT_init(plr, strm);       
                         trm = PT_PARSE(cfg, "Prog");
 
@@ -62,58 +62,57 @@ int main(int argc, char *argv[]) {
                     }
                     Stream_close(strm);
                     Stream_free(strm);
+                }
 
-                    { PL0Prog prog;
-                        GLS_Tok tok_id;
-                        GLS_Lst(PL0Def) lst;
-                        PL0Defs defs;
-                        PL0Stms stms;
+                { PL0Prog prog;
+                    GLS_Tok tok_id;
+                    GLS_Lst(PL0Def) lst;
+                    PL0Stms stms;
 
-                        if (!PL0_Start_Prog(trm, &prog))
-                            puts("error");
-                        else if (PL0Prog_prog(prog, &tok_id, &lst, &stms)) {
-                            c_string s_id = GLS_Tok_string(tok_id);
-                            printf("program %s", s_id);
+                    if (!PL0_Start_Prog(trm, &prog))
+                        puts("error");
+                    else if (PL0Prog_prog(prog, &tok_id, &lst, &stms)) {
+                        c_string s_id = GLS_Tok_string(tok_id);
+                        printf("program %s", s_id);
 
-                            if (GLS_LENGTH(lst) == 0) {
-                                printf(" without defs");
-                            } else {
-                                GLS_Lst(PL0Def) p;
-                                int i;
-                                printf(" with defs");
+                        if (GLS_LENGTH(lst) == 0) {
+                            printf(" without defs");
+                        } else {
+                            GLS_Lst(PL0Def) p;
+                            int i;
+                            printf(" with defs");
 
-                                GLS_FORALL(p, lst) {
-                                    PL0Def def = GLS_FIRST(PL0Def, p);
-                                    GLS_Lst(GLS_tok) lst_toks, q;
-                                    GLS_Lst(PL0Def) lst_defs;
-                                    GLS_Tok tok;
-                                    PL0_Opt3 opt3;
-                                    PL0Stms stms;
-                                    PL0Ids ids;
+                            GLS_FORALL(p, lst) {
+                                PL0Def def = GLS_FIRST(PL0Def, p);
+                                GLS_Lst(GLS_tok) lst_toks, q;
+                                GLS_Lst(PL0Def) lst_defs;
+                                GLS_Tok tok;
+                                PL0_Opt3 opt3;
+                                PL0Stms stms;
+                                PL0Ids ids;
 
-                                    if (PL0Def_proc(def, &tok, &opt3, &lst_defs, &stms)) {
-                                        printf(" proc(%s)", GLS_Tok_string(tok));
-                                    } else if (PL0Def_vars(def, &ids) &&
-                                            PL0Ids_ids(ids, &tok, &lst_toks)) {
+                                if (PL0Def_proc(def, &tok, &opt3, &lst_defs, &stms)) {
+                                    printf(" proc(%s)", GLS_Tok_string(tok));
+                                } else if (PL0Def_vars(def, &ids) &&
+                                        PL0Ids_ids(ids, &tok, &lst_toks)) {
 
-                                        printf(" var(%s)", GLS_Tok_string(tok));
+                                    printf(" var(%s)", GLS_Tok_string(tok));
 
-                                        GLS_FORALL(q, lst_toks) {
-                                            printf(" var(%s)", GLS_Tok_string(GLS_FIRST(GLS_Tok, q)));
-                                        }
+                                    GLS_FORALL(q, lst_toks) {
+                                        printf(" var(%s)", GLS_Tok_string(GLS_FIRST(GLS_Tok, q)));
                                     }
                                 }
                             }
-                        } else
-                            puts("error2");
-                    }
-                
-                    PT_delT(trm);
+                        }
+                    } else
+                        puts("error2");
                 }
-
-                PLR_delTab(plr);            
+            
+                PT_delT(trm);
             }
-        } /* Stream */
+
+            PLR_delTab(plr);            
+        }
 
         Scn_free(scn);
     }
