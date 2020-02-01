@@ -1,0 +1,12 @@
+PROGRAM fib;
+
+{ this syntax can accept usual PL0 codes }
+
+PROCEDURE fib(n);
+    PROCEDURE f(n, i, j);
+        IF n = 0 THEN
+            RETURN i
+        ELSE
+            RETURN f(n - 1, i + j, i);
+
+    RETURN f(n, 1, 0).

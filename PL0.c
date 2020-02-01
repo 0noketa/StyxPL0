@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <sink.h>
 #include <hmap.h>
@@ -25,7 +26,7 @@ c_string loadSrc(char *fileName) {
     FILE *fIn = NULL;
     Sink tmp = Sink_open();
 
-    if (fileName != NULL) fIn = fopen(fileName, "r");
+	if (fileName != NULL) fIn = fopen(fileName, "r");
     if (fIn == NULL) fIn = stdin;
 
     while (!feof(fIn)) {
@@ -39,6 +40,357 @@ c_string loadSrc(char *fileName) {
     return Sink_close(tmp);
 }
 
+void print_escaped_name(const c_string s);
+
+void print_PL0Ids(PL0Ids ids) {
+	GLS_Tok tok;
+	PL0Ids ids2;
+
+	while (1) {
+		if (PL0Ids_none(ids)) {
+			break;
+		} else if (PL0Ids_id(ids, &tok)) {
+			print_escaped_name(GLS_Tok_string(tok));
+			break;
+		} else if (PL0Ids_ids(ids, &tok, &ids2)) {
+			print_escaped_name(GLS_Tok_string(tok));
+			printf(", ");
+
+			ids = ids2;
+			continue;
+		} else {
+			puts("error @ PL0Ids");
+			break;
+		}
+	}
+}
+
+void print_escaped_name(const c_string s) {
+	static const char *keys[17] = {
+		"async",
+		"await",
+		"class",
+		"for",
+		"function",
+		"do",
+		"if",
+		"in",
+		"let",
+		"new",
+		"of",
+		"return",
+		"undefined",
+		"var",
+		"void",
+		"while",
+		"yield",
+	};
+
+	int i;
+
+	for (i = 0; i < 17; ++i)
+		if (!strcmp(s, keys[i])) {
+			printf("_");
+			break;
+		}
+
+	printf("%s", s);
+}
+
+void print_PL0Qid(PL0Qid qid) {
+	PL0Qid qid2;
+	GLS_Tok tok;
+
+	while (1) {
+		if (PL0Qid_id(qid, &tok)) {
+			print_escaped_name(GLS_Tok_string(tok));
+			break;
+		} else if (PL0Qid_qid(qid, &tok, &qid2)) {
+			print_escaped_name(GLS_Tok_string(tok));
+			printf(".");
+
+			qid = qid2;
+			continue;
+		} else {
+			puts("error @ PL0Qid");
+			break;
+		}
+	}
+}
+
+void print_PL0Args(PL0Args args);
+
+void print_PL0Expr(PL0Expr e);
+
+void print_PL0Exprs(PL0Exprs es) {
+	PL0Expr e;
+	PL0Exprs es2;
+
+	while (1) {
+		if (PL0Exprs_none(es)) {
+			break;
+		} else if (PL0Exprs_xpr(es, &e)) {
+			print_PL0Expr(e);
+			break;
+		} else if (PL0Exprs_xprs(es, &e, &es2)) {
+			print_PL0Expr(e);
+			printf(", ");
+
+			es = es2;
+			continue;
+		} else {
+			puts("error @ PL0Exprs");
+			break;
+		}
+	}
+}
+void print_PL0Expr(PL0Expr e) {
+	PL0Qid qid;
+    GLS_Tok tok;
+    PL0Expr el, er;
+    PL0Exprs es;
+	PL0Args args;
+    char *o;
+
+    if (PL0Expr_qid(e, &qid)) {
+		print_PL0Qid(qid);
+    } else if (PL0Expr_int(e, &tok)) {
+        printf("%s", GLS_Tok_string(tok));
+    } else if (PL0Expr_str(e, &tok)) {
+        printf("%s", GLS_Tok_string(tok));
+    } else if (PL0Expr_call(e, &qid, &args)) {
+        print_PL0Qid(qid);
+		printf("(");
+
+        print_PL0Args(args);
+
+        printf(")");
+    } else if (PL0Expr_load(e, &qid, &el)) {
+        print_PL0Qid(qid);
+		printf("[");
+		
+        print_PL0Expr(el);
+
+        printf("]");
+    } else if (PL0Expr_list(e, &es)) {
+        printf("[");
+
+        print_PL0Exprs(es);
+
+        printf("]");
+    } else {
+        o = PL0Expr_add(e, &el, &er) ? "+"
+			: PL0Expr_sub(e, &el, &er) ? "-"
+			: PL0Expr_mul(e, &el, &er) ? "*"
+			: PL0Expr_div(e, &el, &er) ? "/"
+			: PL0Expr_mod(e, &el, &er) ? "%"
+			: PL0Expr_equ(e, &el, &er) ? "=="
+            : PL0Expr_neq(e, &el, &er) ? "!="
+            : NULL;
+        
+        if (o != NULL) {
+            printf("(");
+
+            print_PL0Expr(el);
+
+            printf(") %s (", o);
+
+            print_PL0Expr(er);
+
+            printf(")");
+        } else {
+            puts("error @ PL0Expr");
+        }
+    }
+}
+
+void print_PL0Args(PL0Args args) {
+	PL0Exprs args2;
+
+	if (PL0Args_none(args)) {
+	} else if (PL0Args_args(args, &args2)) {
+		print_PL0Exprs(args2);
+	} else {
+		puts("error @ PL0Args");
+	}
+}
+
+
+void print_PL0Else(PL0Else els);
+void print_PL0Stms(PL0Stms stms);
+void print_PL0Stm(PL0Stm stm) {
+	PL0Qid qid;
+    GLS_Tok tok;
+    PL0Expr e, e2;
+	PL0Stms stms;
+	PL0Args args;
+	PL0Exprs es;
+	PL0Stm stm2;
+	PL0Else els;
+
+	if (PL0Stm_begn(stm, &stms)) {
+		puts("{");
+		print_PL0Stms(stms);
+		puts("}");
+	} else if (PL0Stm_if(stm, &e, &stm2, &els)) {
+		printf("if (");
+		print_PL0Expr(e);
+		printf(") ");
+		print_PL0Stm(stm2);
+		print_PL0Else(els);
+	} else if (PL0Stm_asgn(stm, &qid, &e)) {
+		print_PL0Qid(qid);
+		printf(" = ");
+		print_PL0Expr(e);
+		puts(";");
+	} else if (PL0Stm_stor(stm, &qid, &e, &e2)) {
+		print_PL0Qid(qid);
+		printf("[");
+		print_PL0Expr(e);
+		printf("] = ");
+		print_PL0Expr(e2);
+		puts(";");
+	} else if (PL0Stm_rtrn(stm, &e)) {
+		printf("return ");
+		print_PL0Expr(e);
+		puts(";");
+	} else if (PL0Stm_call(stm, &qid, &args)) {
+		print_PL0Qid(qid);
+		printf("(");
+		print_PL0Args(args);
+		puts(");");
+    } else {
+        puts("error @ PL0Stm");
+    }
+}
+void print_PL0Stms(PL0Stms stms) {
+	PL0Stm stm;
+	PL0Stms stms2;
+
+	while (1) {
+		if (PL0Stms_none(stms)) {
+			break;
+		} else if (PL0Stms_stm(stms, &stm)) {
+			print_PL0Stm(stm);
+			break;
+		} else if (PL0Stms_stms(stms, &stm, &stms2)) {
+			print_PL0Stm(stm);
+
+			stms = stms2;
+			continue;
+		} else {
+			puts("error @ PL0Stms");
+			break;
+		}
+	}
+}
+
+void print_PL0Else(PL0Else els) {
+	PL0Expr e;
+	PL0Stm stm;
+	PL0Else els2;
+
+	while (1) {
+		if (PL0Else_none(els)) {
+			break;
+		} else if (PL0Else_elif(els, &e, &stm, &els2)) {
+			printf("else if(");
+			print_PL0Expr(e);
+			printf(") ");
+			print_PL0Stm(stm);
+
+			els = els2;
+			continue;
+		} else if (PL0Else_else(els, &stm)) {
+			printf("else ");
+			print_PL0Stm(stm);
+			break;
+		} else {
+			puts("error @ PL0Else");
+			break;
+		}
+	}
+}
+
+void print_PL0Proc(PL0Proc proc) {
+	PL0Stms stms;
+
+	if (PL0Proc_Proc(proc, &stms)) {
+		puts("begin");
+		print_PL0Stms(stms);
+		puts("end");
+	}
+	else {
+		puts("error @ PL0Proc");
+	}
+}
+
+
+void print_PL0Defs(PL0Defs defs);
+
+void print_PL0Def(PL0Def def) {
+    GLS_Tok tok;
+	PL0Prms prms;
+    PL0Defs defs;
+    PL0Stms stms;
+    PL0Ids ids;
+
+    if (PL0Def_proc(def, &tok, &prms, &defs)) {
+        printf("var ");
+        print_escaped_name(GLS_Tok_string(tok));
+        printf(" = function(");
+
+        PL0Ids ids;
+
+        if (PL0Prms_none(prms)) {
+        } else if (PL0Prms_prms(prms, &ids)) {
+            print_PL0Ids(ids);
+		} else {
+			puts("error @ PL0Prms(in PL0Def)");
+			return;
+		}
+
+        puts(") {");
+
+        print_PL0Defs(defs);
+
+        puts("};");
+    } else if (PL0Def_vars(def, &ids)) {
+        printf("var ");
+
+        print_PL0Ids(ids);
+
+        puts(";");
+    } else {
+        puts("error @ PL0Def");
+    }
+}
+
+void print_PL0Defs(PL0Defs defs) {
+	PL0Stm stm;
+	PL0Def def;
+	PL0Defs defs2;
+
+	while (1) {
+		if (PL0Defs_none(defs)) {
+			break;
+		} else if (PL0Defs_proc(defs, &stm)) {
+			print_PL0Stm(stm);
+			break;
+		} else if (PL0Defs_def(defs, &def)) {
+			print_PL0Def(def);
+			break;
+		} else if (PL0Defs_defs(defs, &def, &defs2)) {
+			print_PL0Def(def);
+
+			defs = defs2;
+			continue;
+		} else {
+			puts("error @ PL0Defs");
+			break;
+		}
+	}
+}
 
 int main(int argc, char *argv[]) {
     c_string src = NULL;
@@ -49,75 +401,50 @@ int main(int argc, char *argv[]) {
     initSymbols();
     PL0_initSymbols();
 
-    { Scn_T scn;
-        Scn_get_PL0(&scn);
+	{ PT_Term trm;
+		{ Scn_T scn;
+			Scn_get_PL0(&scn);
 
-        { PLR_Tab plr = PLR_get_PL0();
-            { PT_Term trm;
+			{ PLR_Tab plr = PLR_get_PL0();
                 { Scn_Stream strm = Stream_string(scn, src);
                     { PT_Cfg cfg = PT_init(plr, strm);       
                         trm = PT_PARSE(cfg, "Prog");
 
                         PT_quit(cfg);
                     }
-                    Stream_close(strm);
+
+					Stream_close(strm);
                     Stream_free(strm);
                 }
 
-                { PL0Prog prog;
-                    GLS_Tok tok_id;
-                    GLS_Lst(PL0Def) lst;
-                    PL0Stms stms;
+				PLR_delTab(plr);
+			}
 
-                    if (!PL0_Start_Prog(trm, &prog))
-                        puts("error");
-                    else if (PL0Prog_prog(prog, &tok_id, &lst, &stms)) {
-                        c_string s_id = GLS_Tok_string(tok_id);
-                        printf("program %s", s_id);
+			Scn_free(scn);
+		}
 
-                        if (GLS_LENGTH(lst) == 0) {
-                            printf(" without defs");
-                        } else {
-                            GLS_Lst(PL0Def) p;
-                            int i;
-                            printf(" with defs");
+		FreeMem(src);
 
-                            GLS_FORALL(p, lst) {
-                                PL0Def def = GLS_FIRST(PL0Def, p);
-                                GLS_Lst(GLS_tok) lst_toks, q;
-                                GLS_Lst(PL0Def) lst_defs;
-                                GLS_Tok tok;
-                                PL0_Opt3 opt3;
-                                PL0Stms stms;
-                                PL0Ids ids;
+        { PL0Prog prog;
+            GLS_Tok tok_id;
+            PL0Defs defs;
 
-                                if (PL0Def_proc(def, &tok, &opt3, &lst_defs, &stms)) {
-                                    printf(" proc(%s)", GLS_Tok_string(tok));
-                                } else if (PL0Def_vars(def, &ids) &&
-                                        PL0Ids_ids(ids, &tok, &lst_toks)) {
+            if (!PL0_Start_Prog(trm, &prog))
+                puts("error");
+            else if (PL0Prog_prog(prog, &tok_id, &defs)) {
+                c_string s_id = GLS_Tok_string(tok_id);
 
-                                    printf(" var(%s)", GLS_Tok_string(tok));
+                printf("// program %s;\n", s_id);
 
-                                    GLS_FORALL(q, lst_toks) {
-                                        printf(" var(%s)", GLS_Tok_string(GLS_FIRST(GLS_Tok, q)));
-                                    }
-                                }
-                            }
-                        }
-                    } else
-                        puts("error2");
-                }
-            
-                PT_delT(trm);
-            }
+                print_PL0Defs(defs);
 
-            PLR_delTab(plr);            
+                puts("// end.");
+            } else
+                puts("error @ prog");
         }
-
-        Scn_free(scn);
-    }
-
-    FreeMem(src);
+            
+		PT_delT(trm);
+	}
 
     PL0_quitSymbols();
     freeSymbols();

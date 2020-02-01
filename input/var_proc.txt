@@ -3,7 +3,7 @@ VAR n;
 
 PROCEDURE x;
 BEGIN
-	n := n * n;
+	n := n + n;
 	RETURN n
 END;
 

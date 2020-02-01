@@ -1,0 +1,19 @@
+PROGRAM prog;
+
+
+PROCEDURE decorateArray(a);
+    PROCEDURE mymap(f);
+        PROCEDURE g(a, f, i);
+            IF i = 0 THEN
+                RETURN a
+            ELSE
+                BEGIN
+                    a[i - 1] := f(a[i - 1]);
+
+                    RETURN g(a, f, i - 1)
+                END;
+
+        CALL g(this, f, this.length);
+BEGIN
+    a.mymap := mymap
+END.

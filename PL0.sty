@@ -12,44 +12,71 @@ let Num = '0'..'9'
 let Alnm = Alf | Num
 tok Id = Alf {Alnm}
 tok Int = ('1'..'9') {Num} | "0"
-tok Op = "," | ";" | "." | ":=" | "=" | '#+-()[]'
-com Cm = "{" {'\20'..'\7E'| '\r\n\t'} "}"
+tok Str = '\22' {('\20' .. '\21' | '\\' '\22')} '\22'
+tok Op = "," | ";" | "." | ":" | ":=" | "=" | '#+-*/()[]'
+com Cm = "{" {('\20'..'\7C') | '\7E' | '\r\n\t'} "}"
 
 Context Free Grammar
 
 start Prog
-:prog: "PROGRAM" Id ";" [Def ";" ...] "BEGIN" Stms "END" "."
+:prog: "PROGRAM" Id Defs "."
+
+;; replace Stm in Defs/Defs2 if you want to force to use begin-end
+let Proc
+:Proc: "BEGIN" Stms "END"
 
 let Defs
-:non  :
-:defs : Def [";" Def ...]
+:none:
+:proc: ";" Stm
+:def : ";" Def
+:defs: ";" Def Defs
 
 let Def
 :vars: "VAR" Ids
-:proc: "PROCEDURE" Id ["(" Ids ")"] ";" [Def ";" ...] "BEGIN" Stms "END"
+:proc: "PROCEDURE" Id Prms Defs
+
+let Prms
+:none:
+:prms: "(" OptIds ")"
+
+let OptIds
+:none:
+:ign0: Ids
 
 let Ids
-:ids: Id ["," Id ...]
+:id  : Id
+:ids : Id "," Ids
 
 let Stms
-:non  :
-:stms : Stm [";" Stm ...]
+:none:
+:stm : Stm
+:stms: Stm ";" Stms
 
 let Stm
-:begin: "BEGIN" Stms "END"
-:if   : "IF" Expr "THEN" Stm [ElsIf ...] ["ELSE" Stm]
-:assgn: Id ":=" Expr
-:retrn: "RETURN" Expr
-:print: "PRINT" "(" Exprs ")"
-:call : "CALL" Id ["(" Exprs ")"]
+:begn: "BEGIN" Stms "END"
+:if  : "IF" Expr "THEN" Stm Else
+:asgn: Qid ":=" Expr
+:stor: Qid "[" Expr "]" ":=" Expr
+:rtrn: "RETURN" Expr
+;; :prnt: "PRINT" "(" Exprs ")"
+:call: "CALL" Qid OptArgs
 
-let ElsIf
-:non  :
-:elsif: "ELSIF" Expr "THEN" Stm
+let Else
+:none:
+:else: "ELSE" Stm
+:elif: "ELSIF" Expr "THEN" Stm Else
+
+let OptArgs
+:none:
+:ign0: Args
+
+let Args
+:args: "(" Exprs ")"
 
 let Exprs
-:non  :
-:exprs: Expr ["," Expr ...]
+:none:
+:xpr : Expr
+:xprs: Expr "," Exprs
 
 let Expr
 :ign0: Expr2
@@ -63,8 +90,18 @@ let Expr2
 
 let Expr3
 :ign0: Expr4
+:mul : Expr3 "*" Expr4
+:div : Expr3 "/" Expr4
+:mod : Expr3 "MOD" Expr4
 
 let Expr4
-:id  : Id
+:qid : Qid
 :int : Int
-:call: Id "(" Exprs ")"
+:str : Str
+:list: "[" Exprs "]"
+:load: Qid "[" Expr "]"
+:call: Qid Args
+
+let Qid
+:id  : Id
+:qid : Id "." Qid
