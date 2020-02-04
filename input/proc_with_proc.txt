@@ -6,7 +6,7 @@ PROCEDURE x;
 		RETURN 16
 	END;
 BEGIN
-	RETURN x() + 1
+	RETURN y() + 1
 END;
 
 BEGIN

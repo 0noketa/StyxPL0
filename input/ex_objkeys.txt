@@ -1,0 +1,38 @@
+PROGRAM prog;
+
+
+PROCEDURE f(x);
+    PROCEDURE g(x, left, sep, tmp, i);
+        VAR v;
+
+        IF i = 0 THEN
+            RETURN left + tmp
+        ELSE
+            BEGIN
+                v := x[i - 1];
+
+                RETURN g(x, left, ", ", v.toString() + sep + tmp, i - 1)
+            END;
+
+    IF x.info.type = 0 THEN
+        RETURN x.val.toString()
+    ELSIF x.info.type = 1 THEN
+        RETURN x.val
+    ELSE
+        RETURN g(x.val, "[", "", "]", x.info.len);
+
+PROCEDURE put(s);
+    CALL WScript.Echo(f(s));
+
+
+VAR x, y, z;
+
+BEGIN
+    x := (info.type: 0; val: 1);
+    y := (info.type: 1; val: "A");
+    z := (info: (type: 2; len: 2); val: (10, 20));
+
+    CALL put(x);
+    CALL put(y);
+    CALL put(z)
+END.

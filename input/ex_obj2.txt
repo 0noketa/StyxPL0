@@ -1,0 +1,73 @@
+PROGRAM prog;
+
+
+PROCEDURE cons(x, y);
+    RETURN (
+        car: x;
+        cdr: y;
+        map: PROCEDURE(f);
+            PROCEDURE g(f, x, r);
+                IF x = null THEN
+                    RETURN r
+                ELSE
+                    BEGIN
+                        x.car := f(x.car);
+
+                        RETURN g(f, x.cdr, r)
+                    END;
+            
+            RETURN g(f, this, this);
+
+        toArray: PROCEDURE;
+            PROCEDURE f(x);
+                PROCEDURE f(x, y);
+                    IF x = null THEN
+                        RETURN y
+                    ELSE
+                        RETURN f(x.cdr, y.concat(x.car));
+
+                RETURN f(x, []);
+
+            RETURN f(this);
+
+        toString: PROCEDURE;
+            PROCEDURE f(x, s, r);
+                IF x = null THEN
+                    RETURN s + r
+                ELSE
+                    RETURN f(x.cdr, s + "(" + x.car.toString(), r + ")");
+            
+            RETURN f(this, "", "")
+    );
+
+
+PROCEDURE list2cons(x);
+    PROCEDURE f(x, y, i);
+        IF i = 0 THEN
+            RETURN y
+        ELSE
+            RETURN f(x, cons(x[i - 1], y), i - 1);
+
+    RETURN f(x, null, x.length);
+
+
+VAR x, y, z;
+
+BEGIN
+    x := cons(1, cons(2, cons(3, null)));
+    
+    CALL WScript.Echo(x.toString());
+
+    CALL x.map(PROCEDURE(i);
+            VAR j;
+
+            BEGIN
+                j := i * 2 + 1;
+
+                RETURN j.toString()
+            END);
+
+    y := x.toArray();
+
+    CALL WScript.Echo(y.join(", "))
+END.

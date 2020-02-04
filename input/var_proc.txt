@@ -9,7 +9,7 @@ END;
 
 BEGIN
 	n := 2;
-	PRONT(n);
+	PRINT(n);
 	CALL x;
-	PRONT(n);
+	PRINT(n);
 END.

@@ -66,10 +66,11 @@ void print_PL0Ids(PL0Ids ids) {
 }
 
 void print_escaped_name(const c_string s) {
-	static const char *keys[17] = {
+	static const char *keys[18] = {
 		"async",
 		"await",
 		"class",
+		"const",
 		"for",
 		"function",
 		"do",
@@ -88,7 +89,7 @@ void print_escaped_name(const c_string s) {
 
 	int i;
 
-	for (i = 0; i < 17; ++i)
+	for (i = 0; i < 18; ++i)
 		if (!strcmp(s, keys[i])) {
 			printf("_");
 			break;
@@ -118,9 +119,117 @@ void print_PL0Qid(PL0Qid qid) {
 	}
 }
 
-void print_PL0Args(PL0Args args);
+int print_PL0Qid_key(PL0Qid qid) {
+	int d = 0;
+	PL0Qid qid2;
+	GLS_Tok tok;
 
+	while (1) {
+		if (PL0Qid_id(qid, &tok)) {
+			print_escaped_name(GLS_Tok_string(tok));
+
+			break;
+		} else if (PL0Qid_qid(qid, &tok, &qid2)) {
+			print_escaped_name(GLS_Tok_string(tok));
+			printf(":{");
+
+			++d;
+			qid = qid2;
+			continue;
+		}
+		else {
+			puts("error @ PL0Qid");
+			break;
+		}
+	}
+
+	return d;
+}
+
+void print_PL0Defs(PL0Defs defs);
+void print_PL0Args(PL0Args args);
 void print_PL0Expr(PL0Expr e);
+
+void print_PL0KVPair(PL0KVPair kv) {
+	GLS_Tok tok;
+	PL0Qid qid;
+	PL0Expr e;
+
+	if (PL0KVPair_skey(kv, &tok, &e)) {
+		printf("%s: ", GLS_Tok_string(tok));
+		print_PL0Expr(e);
+	} else if (PL0KVPair_ikey(kv, &qid, &e)) {
+		int d = print_PL0Qid_key(qid);
+
+		printf(": ");
+
+		print_PL0Expr(e);
+
+		for (int i = 0; i < d; ++i) {
+			printf("}");
+		}
+	} else {
+		puts("error @ PL0KVPair");
+	}
+}
+
+void print_PL0KVPairs(PL0KVPairs kvs) {
+	PL0KVPair kv;
+	PL0KVPairs kvs2;
+
+	while (1) {
+		if (PL0KVPairs_pair(kvs, &kv)) {
+			print_PL0KVPair(kv);
+			break;
+		} else if (PL0KVPairs_pairs(kvs, &kv, &kvs2)) {
+			print_PL0KVPair(kv);
+			puts(",");
+
+			kvs = kvs2;
+			continue;
+		}
+		else {
+			puts("error @ PL0KVPairs");
+			break;
+		}
+	}
+}
+
+void print_PL0Obj(PL0Obj obj) {
+	PL0KVPairs kvs;
+
+	if (PL0Obj_obj(obj, &kvs)) {
+		puts("{");
+		print_PL0KVPairs(kvs);
+		puts("}");
+	} else {
+		puts("error @ PL0Obj");
+	}
+}
+
+void print_PL0Proc(PL0Proc proc) {
+	PL0OptPrms opt;
+	PL0Ids ids;
+	PL0Defs defs;
+
+	if (PL0Proc_proc(proc, &opt, &defs)) {
+		printf("function(");
+
+		if (PL0OptPrms_none(opt)) {
+		} else if (PL0OptPrms_prms(opt, &ids)) {
+			print_PL0Ids(ids);
+		} else {
+			puts("error @ PL0OptParams(in PL0Proc)");
+			return;
+		}
+
+		printf(") {");
+
+		print_PL0Defs(defs);
+
+		printf("}");
+	}
+}
 
 void print_PL0Exprs(PL0Exprs es) {
 	PL0Expr e;
@@ -149,7 +258,9 @@ void print_PL0Expr(PL0Expr e) {
     GLS_Tok tok;
     PL0Expr el, er;
     PL0Exprs es;
+	PL0Obj obj;
 	PL0Args args;
+	PL0Proc proc;
     char *o;
 
     if (PL0Expr_qid(e, &qid)) {
@@ -158,6 +269,8 @@ void print_PL0Expr(PL0Expr e) {
         printf("%s", GLS_Tok_string(tok));
     } else if (PL0Expr_str(e, &tok)) {
         printf("%s", GLS_Tok_string(tok));
+	} else if (PL0Expr_proc(e, &proc)) {
+		print_PL0Proc(proc);
     } else if (PL0Expr_call(e, &qid, &args)) {
         print_PL0Qid(qid);
 		printf("(");
@@ -172,12 +285,14 @@ void print_PL0Expr(PL0Expr e) {
         print_PL0Expr(el);
 
         printf("]");
-    } else if (PL0Expr_list(e, &es)) {
+    } else if (PL0Expr_lst(e, &es) || PL0Expr_lst2(e, &es)) {
         printf("[");
 
         print_PL0Exprs(es);
 
         printf("]");
+	} else if (PL0Expr_obj(e, &obj)) {
+		print_PL0Obj(obj);
     } else {
         o = PL0Expr_add(e, &el, &er) ? "+"
 			: PL0Expr_sub(e, &el, &er) ? "-"
@@ -312,10 +427,10 @@ void print_PL0Else(PL0Else els) {
 	}
 }
 
-void print_PL0Proc(PL0Proc proc) {
+void print_PL0MainProc(PL0MainProc proc) {
 	PL0Stms stms;
 
-	if (PL0Proc_Proc(proc, &stms)) {
+	if (PL0MainProc_main(proc, &stms)) {
 		puts("begin");
 		print_PL0Stms(stms);
 		puts("end");
@@ -330,7 +445,7 @@ void print_PL0Defs(PL0Defs defs);
 
 void print_PL0Def(PL0Def def) {
     GLS_Tok tok;
-	PL0Prms prms;
+	PL0OptPrms prms;
     PL0Defs defs;
     PL0Stms stms;
     PL0Ids ids;
@@ -342,11 +457,11 @@ void print_PL0Def(PL0Def def) {
 
         PL0Ids ids;
 
-        if (PL0Prms_none(prms)) {
-        } else if (PL0Prms_prms(prms, &ids)) {
+        if (PL0OptPrms_none(prms)) {
+        } else if (PL0OptPrms_prms(prms, &ids)) {
             print_PL0Ids(ids);
 		} else {
-			puts("error @ PL0Prms(in PL0Def)");
+			puts("error @ PL0OptPrms(in PL0Def)");
 			return;
 		}
 
